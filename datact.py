@@ -3,10 +3,14 @@
 # datact - data-aware synchronization in PRISM
 #
 # Usage:
-# datact <MODEL> <DOMAIN>
+# datact <MODEL> <DOMAIN> [<DOM-FILE>]
 #
 # Assuming each action in <MODEL> has type [1 .. DOMAIN], datact translates the
 # <MODEL> into a standard PRISM model without data-aware synchronization.
+#
+# Optionally, specific actions can be given a domain different than <DOMAIN> by
+# specifying a <DOM-FILE>. A <DOM-FILE> is a CSV-file with
+# format <ACTION>, <DOMAIN>.
 
 
 import re
@@ -74,28 +78,53 @@ def expand_renamings(action, values, lines):
     return lines_expanded
 
 
-def expand_actions(actions, values, lines):
+def expand_actions(actions, domains, default_domain, lines):
     result = lines
     for action in actions:
+        if action in domains:
+            domain = domains[action]
+        else:
+            domain = default_domain
+
+        values = list(range(1, domain + 1))
+
         result = expand_commands(action, values, result)
         result = expand_renamings(action, values, result)
 
     return result
 
 
+def read_domains(file_name):
+    pat_domain = re.compile(r"(\b.+?\b)\s*,\s*(\b[0-9]+\b)")
+    domains = dict()
+
+    with open(file_name) as f:
+        for line in f.readlines():
+            m = pat_domain.search(line)
+            if m:
+                action, domain = m.group(1), int(m.group(2))
+                domains[action] = domain
+
+    return domains
+
+
 def main():
-    if len(sys.argv) != 3:
-        print("Usage:", sys.argv[0], "<FILE> <MAX-VALUE>")
+    if len(sys.argv) not in [3, 4]:
+        print("Usage:", sys.argv[0], "<FILE> <DOM-MAX-VALUE> [<DOM-FILE>]")
         return 1
 
     file_name = sys.argv[1]
-    max_value = int(sys.argv[2])
+    default_domain = int(sys.argv[2])
+
+    domains = dict()
+    if len(sys.argv) == 4:
+        domains = read_domains(sys.argv[3])
 
     with open(file_name) as f:
         lines = f.readlines()
 
     actions = find_actions(lines)
-    lines = expand_actions(actions, list(range(1, max_value + 1)), lines)
+    lines = expand_actions(actions, domains, default_domain, lines)
 
     for line in lines:
         print(line, end = "")

@@ -108,6 +108,25 @@ def read_domains(file_name):
     return domains
 
 
+# Module renamings may also rename actions that have an associated domain. Thus,
+# we need to apply the same domain for the renamed actions.
+def extend_domains(domains, lines):
+    # match all module renamings
+    pat_renamings = re.compile(r"module .+=.+\[(.+)\].*endmodule")
+    pat_renaming = re.compile(r"\s*(\b.+\b)\s*=\s*(\b.+\b)")
+
+    for line in lines:
+        m = pat_renamings.match(line)
+        if m:
+            renamings = [r for r in m.group(1).split(",")]
+            for renaming in renamings:
+                mr = pat_renaming.match(renaming)
+                if mr:
+                    act_orig, act_new = mr.group(1), mr.group(2)
+                    if act_orig in domains:
+                        domains[act_new] = domains[act_orig]
+
+
 def main():
     if len(sys.argv) not in [3, 4]:
         print("Usage:", sys.argv[0], "<FILE> <DOM-MAX-VALUE> [<DOM-FILE>]")
@@ -116,12 +135,13 @@ def main():
     file_name = sys.argv[1]
     default_domain = int(sys.argv[2])
 
+    with open(file_name) as f:
+        lines = f.readlines()
+
     domains = dict()
     if len(sys.argv) == 4:
         domains = read_domains(sys.argv[3])
-
-    with open(file_name) as f:
-        lines = f.readlines()
+        extend_domains(domains, lines)
 
     actions = find_actions(lines)
     lines = expand_actions(actions, domains, default_domain, lines)

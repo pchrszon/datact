@@ -44,7 +44,7 @@ def expand_commands(action, values, lines):
 
             for i in values:
                 # expand action name by index
-                act_part_new = re.sub(r"\b" + action + r"\b", action + "_" + str(i), act_part)
+                act_part_new = re.sub(r"\b" + action + r"\b", "_" + action + "_" + str(i), act_part)
 
                 # replace action name by its value
                 var_part_new = re.sub(r"\b" + action + r"\b", str(i), var_part)
@@ -68,7 +68,7 @@ def expand_renamings(action, values, lines):
 
             renamings = []
             for i in values:
-                renamings.append(action + "_" + str(i) + " = " + rename_part + "_" + str(i))
+                renamings.append("_" + action + "_" + str(i) + " = " + "_" + rename_part + "_" + str(i))
 
             line_new = start + str.join(", ", renamings) + end + "\n"
             lines_expanded.append(line_new)
